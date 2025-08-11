@@ -1,0 +1,465 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Mini Messenger — A to Z (Local)</title>
+<style>
+:root{
+  --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#2ea6ff; --in:#0b7b3a;
+  --bubble-self:#2b79ff; --bubble-other:#111827;
+  --glass: rgba(255,255,255,0.03);
+  --radius:12px;
+  color-scheme: dark;
+}
+*{box-sizing:border-box;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;}
+html,body{height:100%;margin:0;background:linear-gradient(180deg,#071028 0%, #081225 100%);color:#e6eef8}
+.app{display:flex;height:100vh;gap:18px;padding:18px;}
+.container{flex:1;display:flex;flex-direction:row;min-width:320px;max-width:1200px;margin:auto;background:linear-gradient(180deg, rgba(255,255,255,0.02), transparent);border-radius:16px;overflow:hidden;box-shadow:0 8px 30px rgba(3,6,20,0.6)}
+.sidebar{width:320px;background:linear-gradient(180deg, rgba(255,255,255,0.01), rgba(255,255,255,0.00));padding:18px;display:flex;flex-direction:column;gap:12px;border-right:1px solid rgba(255,255,255,0.03)}
+.header{display:flex;align-items:center;gap:12px}
+.avatar{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#7f5cff);display:flex;align-items:center;justify-content:center;font-weight:700}
+.h4{font-size:14px;font-weight:600}
+.controls{margin-left:auto;display:flex;gap:8px;align-items:center}
+.search{display:flex;gap:8px;background:var(--glass);padding:8px;border-radius:10px}
+.search input{background:transparent;border:0;color:var(--muted);outline:none;width:100%}
+.list{overflow:auto;padding-right:6px;flex:1}
+.contact{display:flex;gap:12px;padding:10px;border-radius:10px;align-items:center;cursor:pointer}
+.contact:hover{background:rgba(255,255,255,0.01)}
+.contact .meta{flex:1}
+.contact .name{font-size:14px;font-weight:600}
+.contact .last{font-size:12px;color:var(--muted);margin-top:4px}
+.new-btn{background:var(--accent);color:#041026;padding:8px 12px;border-radius:10px;border:0;font-weight:700;cursor:pointer}
+.main{flex:1;display:flex;flex-direction:column}
+.chat-header{display:flex;align-items:center;padding:18px;border-bottom:1px solid rgba(255,255,255,0.02)}
+.chat-title{font-weight:700}
+.chat-body{flex:1;overflow:auto;padding:18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent)}
+.msg-row{max-width:75%;padding:10px 14px;border-radius:14px;background:var(--bubble-other);color:#e6eef8;align-self:flex-start}
+.msg-row.self{background:linear-gradient(90deg,var(--bubble-self),#1b59d6);align-self:flex-end}
+.msg-row .meta{font-size:11px;color:rgba(255,255,255,0.8);margin-top:6px;display:flex;gap:8px;align-items:center}
+.input-area{display:flex;padding:12px;border-top:1px solid rgba(255,255,255,0.02);gap:8px;align-items:center}
+.input-area textarea{flex:1;resize:none;padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.02);color:inherit;outline:none;min-height:44px}
+.icon-btn{background:transparent;border:0;padding:8px;border-radius:8px;cursor:pointer}
+.small{font-size:12px;color:var(--muted)}
+.center{display:flex;align-items:center;justify-content:center}
+.login-screen{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg, rgba(2,6,23,0.7), rgba(2,6,23,0.8));backdrop-filter:blur(6px)}
+.login-box{width:380px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));padding:22px;border-radius:14px;border:1px solid rgba(255,255,255,0.03)}
+.row{display:flex;gap:8px;align-items:center}
+.contact-creation{display:flex;gap:8px}
+.contact .badge{font-size:11px;color:var(--muted)}
+.typing{font-size:12px;color:var(--muted);margin-left:6px}
+.msg-img{max-width:220px;border-radius:10px;display:block;margin-top:8px}
+.muted{color:var(--muted)}
+@media(max-width:840px){.sidebar{display:none}.container{margin:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="container" id="app">
+    <div class="sidebar">
+      <div class="header">
+        <div class="avatar" id="meAvatar">U</div>
+        <div>
+          <div class="h4" id="meName">Guest</div>
+          <div class="small muted" id="meStatus">Offline</div>
+        </div>
+        <div class="controls">
+          <button class="icon-btn small" id="themeToggle">Theme</button>
+        </div>
+      </div>
+
+      <div class="search">
+        <input id="searchInput" placeholder="Search contacts or messages..." />
+      </div>
+
+      <div class="list" id="contactList"></div>
+
+      <div class="row">
+        <input id="newContactInput" placeholder="Add contact (just a name)" style="flex:1;padding:8px;border-radius:8px;border:0;background:rgba(255,255,255,0.02);color:inherit" />
+        <button class="new-btn" id="addContactBtn">Add</button>
+      </div>
+    </div>
+
+    <div class="main">
+      <div class="chat-header" id="chatHeader">
+        <div>
+          <div class="chat-title" id="chatWith">Select a contact</div>
+          <div class="small muted" id="chatSubtitle">—</div>
+        </div>
+        <div style="margin-left:auto" id="chatControls"></div>
+      </div>
+
+      <div class="chat-body" id="chatBody">
+        <div class="center muted" id="welcomeNote">Welcome! Create contact and start chatting. Open another tab and login with a different name to simulate a real conversation.</div>
+      </div>
+
+      <div class="input-area">
+        <input type="file" id="fileInput" style="display:none" accept="image/*" />
+        <button class="icon-btn" id="attachBtn" title="Attach image">📎</button>
+        <textarea id="messageInput" placeholder="Type a message..." rows="1"></textarea>
+        <button class="new-btn" id="sendBtn">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Login overlay -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h3 style="margin:0 0 8px 0">Login / Start</h3>
+    <div style="margin-bottom:8px" class="small muted">Enter your display name — this will be used locally.</div>
+    <div class="row" style="margin-top:8px">
+      <input id="loginName" placeholder="Your name" style="flex:1;padding:10px;border-radius:10px;border:0;background:rgba(255,255,255,0.02);color:inherit" />
+      <button class="new-btn" id="loginBtn">Go</button>
+    </div>
+
+    <hr style="margin:12px 0;border:none;height:1px;background:rgba(255,255,255,0.03)" />
+    <div class="small muted">Tips: Open another tab and login as different user to test real-time via BroadcastChannel. Notifications will ask permission.</div>
+  </div>
+</div>
+
+<script>
+/*
+  Mini Messenger (client-only)
+  Features:
+   - login (local)
+   - contacts creation
+   - chat between local users (stored in localStorage)
+   - real-time syncing across tabs using BroadcastChannel
+   - typing indicator
+   - read receipts
+   - image attachments (base64)
+   - browser notifications
+   - search
+*/
+
+const STORAGE_KEY = 'mini-msg-v1';
+const bc = new BroadcastChannel('mini-messenger-channel');
+
+// simple util
+const qs=(s)=>document.querySelector(s);
+const qsa=(s)=>Array.from(document.querySelectorAll(s));
+const nowStr=()=>new Date().toISOString();
+
+// app state
+let store = { users: {}, contacts: {}, conversations: {} };
+let me = null;
+let selectedContactId = null;
+let typingTimers = {};
+let localTypingTimeout = null;
+let notifyPermissionAsked = false;
+
+function saveStore(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(store)); }
+function loadStore(){ const raw = localStorage.getItem(STORAGE_KEY); if(raw) store = JSON.parse(raw); else saveStore(); }
+
+// create user if not exists
+function ensureUser(name){
+  const id = 'u_'+name.replace(/\s+/g,'_').toLowerCase();
+  if(!store.users[id]) store.users[id] = { id, name, createdAt: nowStr(), avatar: name.slice(0,1).toUpperCase() };
+  saveStore();
+  return store.users[id];
+}
+
+// create contact record
+function addContactForUser(myId, contactName){
+  const contactId = 'u_'+contactName.replace(/\s+/g,'_').toLowerCase();
+  if(!store.users[contactId]) store.users[contactId] = { id: contactId, name: contactName, createdAt: nowStr(), avatar: contactName.slice(0,1).toUpperCase() };
+  if(!store.contacts[myId]) store.contacts[myId] = [];
+  if(!store.contacts[myId].includes(contactId)) store.contacts[myId].unshift(contactId);
+  saveStore();
+  renderContacts();
+  return contactId;
+}
+
+function getConvId(a,b){ return [a,b].sort().join('--'); }
+
+function sendMessage(fromId,toId,content,type='text',meta={}){
+  const conv = getConvId(fromId,toId);
+  if(!store.conversations[conv]) store.conversations[conv] = [];
+  const msg = { id: 'm_'+Math.random().toString(36).slice(2,9), from: fromId, to: toId, content, type, createdAt: nowStr(), status: 'sent', meta };
+  store.conversations[conv].push(msg);
+  saveStore();
+  bc.postMessage({ t:'message', conv, msg });
+  renderConversation(selectedContactId);
+  // notify if not focused on chat with sender
+  if(document.visibilityState === 'hidden' || selectedContactId !== toId){
+    showNotification(store.users[fromId].name + ': ' + (type==='text'?content:(type==='image'?'📷 Image':'')), { body: content });
+  }
+}
+
+function showNotification(title, opts={}){
+  if(!("Notification" in window)) return;
+  if(Notification.permission === 'granted'){ new Notification(title, opts); }
+  else if(Notification.permission !== 'denied' && !notifyPermissionAsked){
+    notifyPermissionAsked = true;
+    Notification.requestPermission().then(p=>{ if(p==='granted') new Notification(title, opts); });
+  }
+}
+
+function markAsRead(convId, readerId){
+  const arr = store.conversations[convId] || [];
+  let changed=false;
+  arr.forEach(m=>{ if(m.to===readerId && m.status !== 'read'){ m.status='read'; changed=true }});
+  if(changed){ saveStore(); bc.postMessage({ t:'read', conv:convId, reader:readerId }); renderConversation(selectedContactId); }
+}
+
+function emitTyping(from,to,active=true){
+  bc.postMessage({ t:'typing', from, to, active });
+}
+
+bc.onmessage = (ev)=>{
+  const data = ev.data;
+  if(!data) return;
+  if(data.t === 'message'){
+    // someone added a message in this tab/window — update store copy
+    if(data.conv && data.msg){
+      if(!store.conversations[data.conv]) store.conversations[data.conv] = [];
+      // ignore duplicates
+      if(!store.conversations[data.conv].some(m=>m.id===data.msg.id)){
+        store.conversations[data.conv].push(data.msg);
+        saveStore();
+        // if chat open and relevant, show; else update contact list badges
+        renderContacts();
+        renderConversation(selectedContactId);
+        // if message to me, and not currently reading, show notification
+        if(me && data.msg.to === me.id && selectedContactId !== data.msg.from){
+          showNotification(store.users[data.msg.from].name + ' sent a message', { body: data.msg.type==='text'?data.msg.content:'Image' });
+        }
+      }
+    }
+  } else if(data.t==='typing'){
+    if(me && data.to === me.id){
+      showTypingIndicator(data.from, data.active);
+    }
+  } else if(data.t==='read'){
+    // update statuses
+    if(data.conv){
+      const arr = store.conversations[data.conv] || [];
+      let changed=false;
+      arr.forEach(m=>{ if(m.to === data.reader && m.status !== 'read'){ m.status='read'; changed=true }});
+      if(changed){ saveStore(); renderConversation(selectedContactId); renderContacts(); }
+    }
+  } else if(data.t==='presence'){
+    // not used currently but could reflect online presence between tabs
+  }
+};
+
+// UI rendering
+function renderContacts(filter=''){
+  const list = qs('#contactList'); list.innerHTML='';
+  if(!me) return;
+  const ids = store.contacts[me.id] || [];
+  ids.forEach(id=>{
+    const user = store.users[id];
+    if(!user) return;
+    // find last message
+    const conv = getConvId(me.id, id);
+    const msgs = store.conversations[conv] || [];
+    const last = msgs[msgs.length-1];
+    if(filter){
+      const text = (user.name + ' ' + (last ? (last.content||'') : '')).toLowerCase();
+      if(!text.includes(filter.toLowerCase())) return;
+    }
+    const el = document.createElement('div');
+    el.className='contact';
+    el.dataset.id = id;
+    el.innerHTML = `
+      <div class="avatar">${user.avatar||user.name[0]}</div>
+      <div class="meta">
+        <div class="name">${user.name} <span class="badge small muted">${getUnreadCount(me.id,id)?'●':''}</span></div>
+        <div class="last">${last ? (last.type==='text' ? last.content.slice(0,40) : '📷 Image') : '<span class="muted">No messages yet</span>'}</div>
+      </div>
+    `;
+    el.addEventListener('click',()=>{ openChatWith(id); });
+    list.appendChild(el);
+  });
+}
+
+function getUnreadCount(myId, otherId){
+  const conv = getConvId(myId, otherId);
+  const msgs = store.conversations[conv] || [];
+  return msgs.filter(m=>m.to === myId && m.status !== 'read').length;
+}
+
+function renderConversation(otherId){
+  const body = qs('#chatBody'); body.innerHTML='';
+  if(!me){ body.appendChild(lockedView('Please login.')); return; }
+  if(!otherId){ body.appendChild(lockedView('Select a contact to start chat.')); return; }
+  const other = store.users[otherId];
+  qs('#chatWith').textContent = other.name;
+  qs('#chatSubtitle').textContent = 'Last seen: unknown';
+  const conv = getConvId(me.id, otherId);
+  const msgs = store.conversations[conv] || [];
+  msgs.forEach(m=>{
+    const div = document.createElement('div');
+    div.className = 'msg-row' + (m.from===me.id ? ' self' : '');
+    if(m.type==='image'){
+      div.innerHTML = `<div>${m.content && m.content.caption?escapeHtml(m.content.caption):''}<img src="${m.content.data}" class="msg-img" /></div>`;
+    } else {
+      div.innerHTML = `<div>${escapeHtml(m.content)}</div>`;
+    }
+    const meta = document.createElement('div'); meta.className='meta';
+    const ts = new Date(m.createdAt).toLocaleString();
+    meta.innerHTML = `<span class="small">${ts}</span> <span class="small muted">${m.from===me.id? (m.status==='read'?'✓✓':m.status==='sent'?'✓':'') : ''}</span>`;
+    div.appendChild(meta);
+    body.appendChild(div);
+  });
+  body.scrollTop = body.scrollHeight;
+  // mark messages as read if they were to me
+  markAsRead(conv, me.id);
+}
+
+function lockedView(text){ const d=document.createElement('div'); d.className='center muted'; d.style.padding='20px'; d.textContent = text; return d; }
+
+function openChatWith(id){
+  selectedContactId = id;
+  renderConversation(id);
+  renderContacts(qs('#searchInput').value);
+  // send read receipt
+  const conv = getConvId(me.id, id);
+  markAsRead(conv, me.id);
+}
+
+function escapeHtml(s){ if(!s) return ''; return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// login flow
+qs('#loginBtn').addEventListener('click', ()=>{
+  const name = qs('#loginName').value.trim();
+  if(!name) return alert('Please enter a name');
+  me = ensureUser(name);
+  qs('#loginScreen').style.display='none';
+  qs('#meName').textContent = me.name;
+  qs('#meAvatar').textContent = me.avatar || me.name[0];
+  qs('#meStatus').textContent = 'Online';
+  // ensure a contacts array exists
+  if(!store.contacts[me.id]) store.contacts[me.id] = [];
+  saveStore();
+  renderContacts();
+  // auto-add a demo contact for convenience if empty
+  if(store.contacts[me.id].length === 0){
+    addContactForUser(me.id, 'Alice');
+    addContactForUser(me.id, 'Bob');
+  }
+});
+
+qs('#loginName').addEventListener('keyup', e=>{ if(e.key==='Enter') qs('#loginBtn').click(); });
+
+// add contact
+qs('#addContactBtn').addEventListener('click', ()=>{
+  const v = qs('#newContactInput').value.trim();
+  if(!v) return;
+  const id = addContactForUser(me.id, v);
+  qs('#newContactInput').value='';
+  renderContacts(qs('#searchInput').value);
+});
+
+// send message
+qs('#sendBtn').addEventListener('click', ()=>{ sendFromInput(); });
+qs('#messageInput').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendFromInput(); }
+  else {
+    if(selectedContactId) {
+      if(localTypingTimeout) clearTimeout(localTypingTimeout);
+      emitTyping(me.id, selectedContactId, true);
+      localTypingTimeout = setTimeout(()=> emitTyping(me.id, selectedContactId, false), 1500);
+    }
+  }
+});
+
+function sendFromInput(){
+  const txt = qs('#messageInput').value.trim();
+  if(!me) return alert('Login first');
+  if(!selectedContactId) return alert('Select a contact');
+  if(txt.length === 0) return;
+  sendMessage(me.id, selectedContactId, txt, 'text');
+  qs('#messageInput').value='';
+}
+
+// attach image
+qs('#attachBtn').addEventListener('click', ()=> qs('#fileInput').click());
+qs('#fileInput').addEventListener('change', (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const data = ev.target.result;
+    // send as image message with optional caption prompt
+    const caption = prompt('Optional caption for the image:') || '';
+    sendMessage(me.id, selectedContactId, { data, caption }, 'image');
+  };
+  reader.readAsDataURL(f);
+  e.target.value = '';
+});
+
+// search input
+qs('#searchInput').addEventListener('input', (e)=> renderContacts(e.target.value));
+
+// typing indicator UI
+function showTypingIndicator(fromId, active){
+  // if chat open with the 'fromId', show a small typing text under subtitle
+  if(selectedContactId === fromId){
+    const el = qs('#chatSubtitle');
+    if(active){ el.textContent = store.users[fromId].name + ' is typing...'; }
+    else { el.textContent = ''; setTimeout(()=>{ if(selectedContactId===fromId) el.textContent=''; }, 1200); }
+  } else {
+    // optionally show badge in contact list — already shows unread dot for unseen messages
+  }
+}
+
+// initial load
+loadStore();
+
+// simple UI hooking for on-load if already logged in earlier — user must re-login each session in this simple flow
+// (we could persist last user in localStorage; keep explicit login for clarity)
+if(localStorage.getItem('mini-msg-last-user')){
+  const last = localStorage.getItem('mini-msg-last-user');
+  if(store.users[last]){ me = store.users[last]; qs('#loginScreen').style.display='none'; qs('#meName').textContent = me.name; qs('#meAvatar').textContent = me.avatar; qs('#meStatus').textContent='Online'; renderContacts(); }
+}
+
+qs('#loginBtn').addEventListener('click', ()=> {
+  if(me) localStorage.setItem('mini-msg-last-user', me.id);
+});
+
+// when visibility changes, mark presence (not strictly necessary)
+document.addEventListener('visibilitychange', ()=> {
+  // we could broadcast presence here
+});
+
+// small helper to render contacts initially
+renderContacts();
+
+// theme toggle (simple inversion)
+qs('#themeToggle').addEventListener('click', ()=>{
+  // playful: toggle accent
+  const root = document.documentElement;
+  if(root.style.getPropertyValue('--accent') === 'var(--accent)'){}
+  // small theme swap
+  if(root.style.getPropertyValue('--bg')){
+    root.style.removeProperty('--bg');
+  }
+  alert('Theme toggled (basic demo).');
+});
+
+// keyboard shortcuts
+document.addEventListener('keydown', (e)=>{
+  if(e.ctrlKey && e.key === 'k'){ e.preventDefault(); qs('#searchInput').focus(); }
+});
+
+// small auto-save snapshot to localStorage on unload
+window.addEventListener('beforeunload', ()=> saveStore());
+
+// expose some debugging helpers (in console)
+window.__MINI_MSG = { store, saveStore, loadStore, sendMessage, ensureUser, addContactForUser };
+
+// initial welcome note
+qs('#welcomeNote').textContent = 'Welcome! Add a contact and start chatting. Open another tab and login under a different name to simulate two users.';
+
+// friendly tip: handle opening other tabs: ask for name each time
+if(!me){
+  // focus login input
+  qs('#loginName').focus();
+}
+
+</script>
+</body>
+</html>
